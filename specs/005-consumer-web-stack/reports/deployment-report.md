@@ -120,8 +120,8 @@ No optimization recommendations provided.
 
 | Field | Value |
 | ----- | ----- |
-| Destroy Status | PENDING |
-| Destroy Run URL | N/A |
+| Destroy Status | DESTROYED |
+| Resources Destroyed | 27 |
 
 ## Overall Status
 

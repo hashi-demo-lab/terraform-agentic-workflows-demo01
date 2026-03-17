@@ -23,6 +23,10 @@ env:
   # GitHub resolves the correct store automatically based on the trigger context.
   # TFE_TOKEN_DEPENDABOT (Dependabot secret, PMR read-only) is used only by dependabot.yml.
   TFE_TOKEN: ${{ secrets.TFE_TOKEN }}
+  # tfc-workflows-github actions read these env vars automatically
+  TF_API_TOKEN: ${{ secrets.TFE_TOKEN }}
+  TF_CLOUD_ORGANIZATION: "hashi-demos-apj"
+  TF_WORKSPACE: "terraform-agentic-workflows-demo01"
 
 jobs:
   # ─────────────────────────────────────────────────
@@ -102,11 +106,10 @@ jobs:
     if: needs.classify.outputs.should_continue == 'true'
     runs-on: ubuntu-latest
     outputs:
-      plan_exitcode: ${{ steps.plan.outputs.exitcode }}
+      plan_exitcode: ${{ steps.plan-result.outputs.exitcode }}
       validate_exitcode: ${{ steps.validate.outputs.exitcode }}
       plan_summary: ${{ steps.plan-summary.outputs.summary }}
-      plan_resources: ${{ steps.plan-summary.outputs.plan_resources }}
-      run_url: ${{ steps.plan.outputs.run_url }}
+      run_url: ${{ steps.run.outputs.run_link }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -122,7 +125,7 @@ jobs:
         run: terraform fmt -check -recursive
 
       - name: Terraform Init
-        run: terraform init -input=false
+        run: terraform init -backend=false -input=false
 
       - name: Terraform Validate
         id: validate
@@ -160,154 +163,126 @@ jobs:
           tflint --format=compact
         if: steps.validate.outputs.exitcode == '0'
 
-      - name: Terraform Plan
+      # ── Speculative plan via TFC API (no Apply button, no workspace lock) ──
+      - name: Upload Configuration
         if: steps.validate.outputs.exitcode == '0'
-        id: plan
-        run: |
-          set +e
-          set -o pipefail
-          terraform plan -detailed-exitcode -input=false -out=tfplan 2>&1 | tee plan_output.txt
-          PLAN_EXIT=${PIPESTATUS[0]}
-          set +o pipefail
-          set -e
-
-          echo "exitcode=${PLAN_EXIT}" >> "$GITHUB_OUTPUT"
-
-          # Extract TFC run URL (CLI-driven workspaces print this during remote plan).
-          # Strip ANSI escape codes (\x1B[0m etc.) that Terraform includes in colored output.
-          RUN_URL=$(grep -oP 'https://app\.terraform\.io/\S+' plan_output.txt | head -1 | sed 's/\x1B\[[0-9;]*m//g' || true)
-          echo "run_url=${RUN_URL}" >> "$GITHUB_OUTPUT"
-
-          case $PLAN_EXIT in
-            0)
-              {
-                echo "## 2/4 — Validate Terraform"
-                echo ""
-                echo "> **Result**: No changes — workspace already at target version."
-                echo ""
-                echo "The PR will be auto-closed."
-                if [[ -n "$RUN_URL" ]]; then
-                  echo ""
-                  echo "> :link: [View TFC Run](${RUN_URL})"
-                fi
-              } >> "$GITHUB_STEP_SUMMARY"
-              ;;
-            1)
-              {
-                echo "## 2/4 — Validate Terraform"
-                echo ""
-                echo "> **Result**: Plan error — likely breaking changes."
-                echo ""
-                echo "<details><summary>Error output (last 30 lines)</summary>"
-                echo ""
-                echo '```hcl'
-                tail -30 plan_output.txt
-                echo '```'
-                echo ""
-                echo "</details>"
-                if [[ -n "$RUN_URL" ]]; then
-                  echo ""
-                  echo "> :link: [View TFC Run](${RUN_URL})"
-                fi
-              } >> "$GITHUB_STEP_SUMMARY"
-              ;;
-            2)
-              terraform show -no-color tfplan > plan_readable.txt 2>&1 || true
-
-              # Generate resource table (gist-style: Action | Resource)
-              {
-                awk '/will be/ || /must be/ {print "| " $5 " | " $2 " |"; next}' plan_readable.txt \
-                  | sed \
-                    -e 's/created/:white_check_mark: add/' \
-                    -e 's/destroyed/:bangbang: destroy/' \
-                    -e 's/replaced/:warning: replace/' \
-                    -e 's/updated/:warning: change/' \
-                    -e 's/read/:mag: read/'
-              } > plan_resources_table.txt
-
-              # Plan summary line (e.g., "Plan: 4 to add, 0 to change, 0 to destroy.")
-              PLAN_LINE=$(awk '/Plan:/ { print $0 }' plan_readable.txt || echo "")
-
-              {
-                echo "## 2/4 — Validate Terraform"
-                echo ""
-                echo "> **Result**: Changes detected — proceeding to risk assessment."
-                echo ""
-                echo "| Check | Status |"
-                echo "|-------|--------|"
-                echo "| \`terraform fmt\` | Passed |"
-                echo "| \`terraform validate\` | Passed |"
-                echo "| \`tflint\` | Passed |"
-                echo "| \`terraform plan\` | Exit 2 (changes) |"
-                echo ""
-
-                if [[ -s plan_resources_table.txt ]]; then
-                  echo "### Planned Resource Changes"
-                  echo ""
-                  echo "| Action | Resource |"
-                  echo "|--------|----------|"
-                  cat plan_resources_table.txt
-                  echo ""
-                fi
-
-                if [[ -n "$PLAN_LINE" ]]; then
-                  echo "> ${PLAN_LINE}"
-                fi
-                if [[ -n "$RUN_URL" ]]; then
-                  echo ""
-                  echo "> :link: [View TFC Run](${RUN_URL})"
-                fi
-              } >> "$GITHUB_STEP_SUMMARY"
-              ;;
-          esac
-
-          exit 0
-
-      - name: Upload plan artifact
-        if: steps.plan.outputs.exitcode == '2'
-        uses: actions/upload-artifact@v4
+        id: upload
+        uses: hashicorp/tfc-workflows-github/actions/upload-configuration@v1.3.2
         with:
-          name: tfplan
-          path: |
-            plan_output.txt
-            plan_readable.txt
-          retention-days: 5
+          workspace: ${{ env.TF_WORKSPACE }}
+          directory: "."
+          speculative: true
+
+      - name: Create Plan Run
+        if: steps.validate.outputs.exitcode == '0' && steps.upload.outputs.status == 'Success'
+        id: run
+        uses: hashicorp/tfc-workflows-github/actions/create-run@v1.3.2
+        continue-on-error: true
+        with:
+          workspace: ${{ env.TF_WORKSPACE }}
+          configuration_version: ${{ steps.upload.outputs.configuration_version_id }}
+          plan_only: true
+          message: "Speculative plan for PR #${{ github.event.pull_request.number }} (${{ github.head_ref }})"
+
+      - name: Get Plan Output
+        if: steps.run.outputs.status == 'Success'
+        id: plan-output
+        uses: hashicorp/tfc-workflows-github/actions/plan-output@v1.3.2
+        with:
+          plan: ${{ steps.run.outputs.plan_id }}
+
+      - name: Determine plan result
+        id: plan-result
+        if: steps.validate.outputs.exitcode == '0'
+        run: |
+          RUN_STATUS="${{ steps.run.outputs.status }}"
+          PLAN_STATUS="${{ steps.run.outputs.plan_status }}"
+          ADD="${{ steps.plan-output.outputs.add }}"
+          CHANGE="${{ steps.plan-output.outputs.change }}"
+          DESTROY="${{ steps.plan-output.outputs.destroy }}"
+          RUN_LINK="${{ steps.run.outputs.run_link }}"
+
+          if [[ "$RUN_STATUS" != "Success" ]]; then
+            # Run failed or timed out — equivalent to old exit code 1
+            echo "exitcode=1" >> "$GITHUB_OUTPUT"
+            {
+              echo "## 2/4 — Validate Terraform"
+              echo ""
+              echo "> **Result**: Plan error — likely breaking changes."
+              echo ""
+              echo "The speculative plan run failed with status: \`${PLAN_STATUS}\`."
+              if [[ -n "$RUN_LINK" ]]; then
+                echo ""
+                echo "> :link: [View TFC Run](${RUN_LINK})"
+              fi
+            } >> "$GITHUB_STEP_SUMMARY"
+
+          elif [[ "${ADD:-0}" -eq 0 ]] && [[ "${CHANGE:-0}" -eq 0 ]] && [[ "${DESTROY:-0}" -eq 0 ]]; then
+            # No changes — equivalent to old exit code 0
+            echo "exitcode=0" >> "$GITHUB_OUTPUT"
+            {
+              echo "## 2/4 — Validate Terraform"
+              echo ""
+              echo "> **Result**: No changes — workspace already at target version."
+              echo ""
+              echo "The PR will be auto-closed."
+              if [[ -n "$RUN_LINK" ]]; then
+                echo ""
+                echo "> :link: [View TFC Run](${RUN_LINK})"
+              fi
+            } >> "$GITHUB_STEP_SUMMARY"
+
+          else
+            # Changes detected — equivalent to old exit code 2
+            echo "exitcode=2" >> "$GITHUB_OUTPUT"
+            {
+              echo "## 2/4 — Validate Terraform"
+              echo ""
+              echo "> **Result**: Changes detected — proceeding to risk assessment."
+              echo ""
+              echo "| Check | Status |"
+              echo "|-------|--------|"
+              echo "| \`terraform fmt\` | Passed |"
+              echo "| \`terraform validate\` | Passed |"
+              echo "| \`tflint\` | Passed |"
+              echo "| Speculative Plan | Changes detected |"
+              echo ""
+              echo "| Action | Count |"
+              echo "|--------|-------|"
+              echo "| :white_check_mark: Add | ${ADD:-0} |"
+              echo "| :warning: Change | ${CHANGE:-0} |"
+              echo "| :bangbang: Destroy | ${DESTROY:-0} |"
+              echo ""
+              if [[ -n "$RUN_LINK" ]]; then
+                echo "> :link: [View full plan in TFC](${RUN_LINK})"
+              fi
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
 
       - name: Parse plan summary
         id: plan-summary
-        if: steps.plan.outputs.exitcode == '2'
+        if: steps.plan-result.outputs.exitcode == '2'
         run: |
-          ADD=$(grep -c '# .* will be created' plan_readable.txt 2>/dev/null || true)
-          CHANGE=$(grep -c '# .* will be updated' plan_readable.txt 2>/dev/null || true)
-          DESTROY=$(grep -c '# .* will be destroyed' plan_readable.txt 2>/dev/null || true)
-          REPLACE=$(grep -c '# .* must be replaced' plan_readable.txt 2>/dev/null || true)
-          ADD=${ADD:-0}; CHANGE=${CHANGE:-0}; DESTROY=${DESTROY:-0}; REPLACE=${REPLACE:-0}
+          ADD="${{ steps.plan-output.outputs.add }}"
+          CHANGE="${{ steps.plan-output.outputs.change }}"
+          DESTROY="${{ steps.plan-output.outputs.destroy }}"
+          ADD=${ADD:-0}; CHANGE=${CHANGE:-0}; DESTROY=${DESTROY:-0}
 
           SUMMARY=$(jq -n \
             --argjson add "$ADD" \
             --argjson change "$CHANGE" \
             --argjson destroy "$DESTROY" \
-            --argjson replace "$REPLACE" \
-            '{add: $add, change: $change, destroy: $destroy, replace: $replace, total: ($add + $change + $destroy + $replace)}')
+            '{add: $add, change: $change, destroy: $destroy, total: ($add + $change + $destroy)}')
 
           echo "summary=$(echo "$SUMMARY" | jq -c '.')" >> "$GITHUB_OUTPUT"
 
-          # Output the resource table as multiline string for the PR comment
-          if [[ -s plan_resources_table.txt ]]; then
-            {
-              echo "plan_resources<<PLAN_TABLE_EOF"
-              cat plan_resources_table.txt
-              echo "PLAN_TABLE_EOF"
-            } >> "$GITHUB_OUTPUT"
-          fi
-
       - name: Handle no-changes (exit 0) — close PR
-        if: steps.plan.outputs.exitcode == '0'
+        if: steps.plan-result.outputs.exitcode == '0'
         uses: actions/github-script@v7
         with:
           script: |
             const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
-            const tfcRunUrl = '${{ steps.plan.outputs.run_url }}';
+            const tfcRunUrl = '${{ steps.run.outputs.run_link }}';
             let footer = `\n---\n📋 [Pipeline run](${runUrl})`;
             if (tfcRunUrl) footer += ` · :link: [TFC Run](${tfcRunUrl})`;
 
@@ -325,13 +300,13 @@ jobs:
             });
 
       - name: Handle plan error (exit 1) — label + auto-trigger Claude
-        if: steps.plan.outputs.exitcode == '1'
+        if: steps.plan-result.outputs.exitcode == '1'
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GH_PAT || github.token }}
           script: |
             const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
-            const tfcRunUrl = '${{ steps.plan.outputs.run_url }}';
+            const tfcRunUrl = '${{ steps.run.outputs.run_link }}';
             let footer = `📋 [Pipeline run](${runUrl})`;
             if (tfcRunUrl) footer += ` · :link: [TFC Run](${tfcRunUrl})`;
 
@@ -418,14 +393,15 @@ jobs:
           PLAN_SUMMARY: ${{ needs.validate.outputs.plan_summary }}
         run: |
           # ── Parse plan summary ──
+          # Note: TFC folds replacements into destroy + add counts,
+          # so destroy > 0 catches both pure destroys and replacements.
           ADD=$(echo "$PLAN_SUMMARY" | jq -r '.add // 0')
           CHANGE=$(echo "$PLAN_SUMMARY" | jq -r '.change // 0')
           DESTROY=$(echo "$PLAN_SUMMARY" | jq -r '.destroy // 0')
-          REPLACE=$(echo "$PLAN_SUMMARY" | jq -r '.replace // 0')
           TOTAL=$(echo "$PLAN_SUMMARY" | jq -r '.total // 0')
 
           HAS_DESTRUCTIVE=false
-          if [[ "$DESTROY" -gt 0 ]] || [[ "$REPLACE" -gt 0 ]]; then
+          if [[ "$DESTROY" -gt 0 ]]; then
             HAS_DESTRUCTIVE=true
           fi
 
@@ -435,22 +411,22 @@ jobs:
           # No adds, no changes         auto-merge/low    auto-merge/low
           # Adds only, no changes       needs-review/low  needs-review/medium
           # Changes (with or w/o adds)  needs-review/med  needs-review/high
-          # DESTROY/REPLACE             breaking/high     breaking/critical
+          # DESTROY (incl. replace)     breaking/high     breaking/critical
           # Plan fails (exit 1)         breaking/high     breaking/critical
           #
           # "adds" = new resources created. "changes" = existing resources modified.
           # (Plan exit 1 is handled in validate job; this job only runs on exit 2)
 
           if [[ "$HAS_DESTRUCTIVE" == "true" ]]; then
-            # DESTROY or REPLACE in plan — always block
+            # DESTROY in plan (includes replacements) — always block
             if [[ "$VERSION_TYPE" == "major" ]]; then
               DECISION="breaking-change"
               RISK_LEVEL="critical"
-              RATIONALE="Plan contains destructive operations (destroy: ${DESTROY}, replace: ${REPLACE}) on a major version bump — merge blocked."
+              RATIONALE="Plan contains destructive operations (destroy: ${DESTROY}) on a major version bump — merge blocked."
             else
               DECISION="breaking-change"
               RISK_LEVEL="high"
-              RATIONALE="Plan contains destructive operations (destroy: ${DESTROY}, replace: ${REPLACE}) — merge blocked regardless of semver type."
+              RATIONALE="Plan contains destructive operations (destroy: ${DESTROY}) — merge blocked regardless of semver type."
             fi
           elif [[ "$ADD" -eq 0 ]] && [[ "$CHANGE" -eq 0 ]]; then
             # No adds, no changes — safe to auto-merge
@@ -517,7 +493,6 @@ jobs:
             echo "| Add | ${ADD} |"
             echo "| Change | ${CHANGE} |"
             echo "| Destroy | ${DESTROY} |"
-            echo "| Replace | ${REPLACE} |"
             echo "| **Total** | **${TOTAL}** |"
             echo ""
             echo "### Rationale"
@@ -619,7 +594,6 @@ jobs:
         env:
           ANALYSIS_RESULT: ${{ needs.risk-assessment.outputs.analysis_result }}
           MODULES_CHANGED: ${{ needs.classify.outputs.modules_changed }}
-          PLAN_RESOURCES: ${{ needs.validate.outputs.plan_resources }}
           TFC_RUN_URL: ${{ needs.validate.outputs.run_url }}
         with:
           github-token: ${{ secrets.GH_PAT || github.token }}
@@ -658,7 +632,7 @@ jobs:
 
             // ── Plan changes table ──
             const plan = result.plan_summary || {};
-            const planTotal = (plan.add || 0) + (plan.change || 0) + (plan.destroy || 0) + (plan.replace || 0);
+            const planTotal = (plan.add || 0) + (plan.change || 0) + (plan.destroy || 0);
 
             body += `### Plan Changes\n\n`;
             body += `| Action | Count |\n`;
@@ -666,23 +640,19 @@ jobs:
             body += `| :white_check_mark: **Add** | ${plan.add || 0} |\n`;
             body += `| :warning: **Change** | ${plan.change || 0} |\n`;
             body += `| :bangbang: **Destroy** | ${plan.destroy || 0} |\n`;
-            body += `| :warning: **Replace** | ${plan.replace || 0} |\n`;
             body += `| **Total** | **${planTotal}** |\n\n`;
 
-            // ── Plan resource table ──
-            const planResources = process.env.PLAN_RESOURCES || '';
-            if (planResources.trim()) {
-              body += `### Planned Resource Changes\n\n`;
-              body += `| Action | Resource |\n`;
-              body += `|--------|----------|\n`;
-              body += planResources.trim() + `\n\n`;
+            // ── Plan details link ──
+            const tfcRunUrl = process.env.TFC_RUN_URL || '';
+            if (tfcRunUrl) {
+              body += `### Plan Details\n\n`;
+              body += `View the full resource-level plan in HCP Terraform: [:link: View Plan](${tfcRunUrl})\n\n`;
             }
 
             // ── Rationale ──
             body += `### Rationale\n\n${result.rationale}\n\n`;
 
             // ── Footer ──
-            const tfcRunUrl = process.env.TFC_RUN_URL || '';
             body += `---\n`;
             body += `📋 [Pipeline run](${runUrl})`;
             if (tfcRunUrl) {

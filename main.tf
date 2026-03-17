@@ -6,9 +6,10 @@ module "demo_bucket" {
   source  = "app.terraform.io/hashi-demos-apj/s3-bucket/aws"
   version = "6.0.0"
 
-  bucket_prefix = "${var.bucket_prefix}-${var.environment}"
-  environment   = var.environment
-  force_destroy = var.force_destroy
+  bucket_prefix            = "${var.bucket_prefix}-${var.environment}"
+  environment              = var.environment
+  force_destroy            = var.force_destroy
+  control_object_ownership = false # preserve pre-6.0.0 behavior; default changed false→true in 6.0.0
 
   versioning = {
     enabled = true

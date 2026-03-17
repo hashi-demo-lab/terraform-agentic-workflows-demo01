@@ -4,7 +4,7 @@ provider "aws" {
 
 module "demo_bucket" {
   source  = "app.terraform.io/hashi-demos-apj/s3-bucket/aws"
-  version = "5.8.2"
+  version = "~> 5.8.3"
 
   bucket_prefix = "${var.bucket_prefix}-${var.environment}"
   force_destroy = var.force_destroy
@@ -27,5 +27,6 @@ module "demo_bucket" {
     Project     = var.project
     ManagedBy   = "terraform"
     Purpose     = "consumer-uplift-demo"
+    DemoRun     = "patch-bump"
   }
 }

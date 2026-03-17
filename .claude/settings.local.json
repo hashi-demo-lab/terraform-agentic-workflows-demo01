@@ -39,7 +39,6 @@
       "Bash(git log:*)",
       "Bash(echo:*)",
       "Skill(tf-e2e-tester)",
-
       "Skill(terraform-test)",
       "Skill(terraform-stacks)",
       "Bash(find:*)",
@@ -65,7 +64,9 @@
       "Bash(gh issue view:*)",
       "Bash(GH_HOST=github.ibm.com gh issue view:*)",
       "Bash(gh api:*)",
-      "Bash(open:*)"
+      "Bash(open:*)",
+      "Bash(pip install:*)",
+      "Bash(node:*)"
     ],
     "deny": [
       "Write(.gitignore)",

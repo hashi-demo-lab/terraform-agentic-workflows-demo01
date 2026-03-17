@@ -10,14 +10,17 @@ data "aws_vpc" "selected" {
 }
 
 # Discover public subnets in the selected VPC
+# Uses map-public-ip-on-launch attribute to identify public subnets
+# when tag-based filtering is not available
 data "aws_subnets" "public" {
   filter {
     name   = "vpc-id"
     values = [data.aws_vpc.selected.id]
   }
 
-  tags = {
-    Tier = var.subnet_tier_tag
+  filter {
+    name   = "map-public-ip-on-launch"
+    values = ["true"]
   }
 }
 

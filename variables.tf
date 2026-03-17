@@ -89,6 +89,7 @@ variable "name_prefix" {
 variable "owner" {
   description = "Owner identifier for tagging (team or individual)"
   type        = string
+  default     = "e2e-test"
 
   validation {
     condition     = length(var.owner) > 0
@@ -99,6 +100,7 @@ variable "owner" {
 variable "project_name" {
   description = "Project name used for tagging and resource naming prefix"
   type        = string
+  default     = "web-stack"
 
   validation {
     condition     = can(regex("^[a-z0-9-]{1,32}$", var.project_name))

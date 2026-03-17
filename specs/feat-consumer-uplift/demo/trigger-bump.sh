@@ -107,14 +107,16 @@ success "Branch created: ${BRANCH_NAME}"
 # ─── Apply scenario changes ─────────────────────────────────────────────────
 header "Applying Scenario: ${SCENARIO}"
 
-  # Replace version constraint in demo_bucket module ONLY (not other modules)
+  # Replace version constraint in main.tf — matches any existing constraint format
   # e.g., "5.8.2", "~> 5.8.2", ">= 5.8.2"
   replace_version() {
     local target="$1"
-    sed -i '/module "demo_bucket"/,/^}/ s|version[[:space:]]*=[[:space:]]*"[^"]*"|version = "'"${target}"'"|' main.tf
+    local replaced
+    replaced=$(sed "s|version[[:space:]]*=[[:space:]]*\"[^\"]*\"|version = \"${target}\"|" main.tf)
+    echo "$replaced" > main.tf
 
     # Verify the replacement actually happened
-    if ! sed -n '/module "demo_bucket"/,/^}/p' main.tf | grep -q "version = \"${target}\""; then
+    if ! grep -q "version = \"${target}\"" main.tf; then
       error "Failed to replace version constraint in main.tf"
       exit 1
     fi

@@ -16,14 +16,14 @@ variable "aws_region" {
   default     = "ap-southeast-2"
 }
 
-variable "name_prefix" {
-  description = "Prefix for all resource names"
+variable "bucket_prefix" {
+  description = "Prefix for the S3 bucket name"
   type        = string
   default     = "uplift-demo"
 }
 
-variable "vpc_cidr" {
-  description = "CIDR block for the VPC"
-  type        = string
-  default     = "10.0.0.0/16"
+variable "force_destroy" {
+  description = "Allow bucket deletion even when non-empty"
+  type        = bool
+  default     = true
 }

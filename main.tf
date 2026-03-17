@@ -177,3 +177,155 @@ module "ec2_web" {
     Component = "compute"
   })
 }
+
+# --------------------------------------------------------------------------
+# Load Balancer and Monitoring (Item D) -- ALB, CloudWatch alarms
+# --------------------------------------------------------------------------
+
+# Application Load Balancer with HTTP listener, target group, and access logging per FR-2
+module "alb" {
+  source  = "app.terraform.io/hashi-demos-apj/alb/aws"
+  version = "~> 10.1"
+
+  name               = local.alb_name
+  load_balancer_type = "application"
+  vpc_id             = data.aws_vpc.selected.id
+  subnets            = data.aws_subnets.public.ids
+
+  # [SECURITY OVERRIDE] Dev environment: deletion protection disabled for easy teardown (REL09-BP01)
+  enable_deletion_protection = false
+
+  # Module secure defaults honoured -- DO NOT override:
+  # drop_invalid_header_fields = true (SEC06-BP01)
+  # enable_cross_zone_load_balancing = true
+
+  # ALB module creates its own security group per architectural decision
+  create_security_group = true
+
+  # HTTP/80 ingress from anywhere for public-facing ALB per SEC05-BP03
+  security_group_ingress_rules = {
+    http = {
+      from_port   = 80
+      to_port     = 80
+      ip_protocol = "tcp"
+      cidr_ipv4   = "0.0.0.0/0"
+      description = "HTTP from internet"
+    }
+  }
+
+  # Allow all egress for health checks and target communication
+  security_group_egress_rules = {
+    all = {
+      ip_protocol = "-1"
+      cidr_ipv4   = "0.0.0.0/0"
+      description = "All egress"
+    }
+  }
+
+  # Target group with EC2 instance attached (Pattern A: built-in attachment) per wiring table
+  target_groups = {
+    web = {
+      name_prefix = "web-"
+      protocol    = "HTTP"
+      port        = 80
+      target_type = "instance"
+      target_id   = module.ec2_web.id # Wiring: module.ec2_web.id -> target_groups.web.target_id
+      vpc_id      = data.aws_vpc.selected.id
+
+      health_check = {
+        enabled             = true
+        path                = "/"
+        healthy_threshold   = 3
+        unhealthy_threshold = 3
+        interval            = 30
+        matcher             = "200"
+      }
+    }
+  }
+
+  # HTTP listener on port 80 forwarding to the web target group per FR-2
+  listeners = {
+    http = {
+      port     = 80
+      protocol = "HTTP"
+
+      # [SECURITY OVERRIDE] Dev environment: HTTP-only, HTTPS/TLS out of scope.
+      # Internal-only HTTP traffic between ALB and EC2.
+      forward = {
+        target_group_key = "web" # References key in target_groups map
+      }
+    }
+  }
+
+  # ALB access logs to S3 bucket per CIS AWS 2.6
+  # Wiring: module.s3_alb_logs.s3_bucket_name -> access_logs.bucket
+  access_logs = {
+    bucket  = module.s3_alb_logs.s3_bucket_name
+    enabled = true
+    prefix  = "alb"
+  }
+
+  tags = merge(local.common_tags, {
+    Component = "networking"
+  })
+}
+
+# CloudWatch metric alarm for ALB 5xx errors per FR-9
+module "alb_5xx_alarm" {
+  source  = "app.terraform.io/hashi-demos-apj/cloudwatch/aws//modules/metric-alarm"
+  version = "~> 5.7"
+
+  alarm_name          = "${local.name_prefix}-alb-5xx"
+  alarm_description   = "ALB 5XX error count exceeds threshold"
+  comparison_operator = "GreaterThanOrEqualToThreshold"
+  evaluation_periods  = 2
+  threshold           = 10
+  period              = 300
+  statistic           = "Sum"
+
+  namespace   = "AWS/ApplicationELB"
+  metric_name = "HTTPCode_ELB_5XX_Count"
+
+  # Wiring: module.alb.arn_suffix -> dimensions.LoadBalancer
+  dimensions = {
+    LoadBalancer = module.alb.arn_suffix
+  }
+
+  # Wiring: module.sns_alerts.topic_arn -> alarm_actions (string -> list wrapping)
+  alarm_actions = [module.sns_alerts.topic_arn]
+  ok_actions    = [module.sns_alerts.topic_arn]
+
+  tags = merge(local.common_tags, {
+    Component = "monitoring"
+  })
+}
+
+# CloudWatch metric alarm for SQS queue depth per FR-9
+module "sqs_depth_alarm" {
+  source  = "app.terraform.io/hashi-demos-apj/cloudwatch/aws//modules/metric-alarm"
+  version = "~> 5.7"
+
+  alarm_name          = "${local.name_prefix}-sqs-depth"
+  alarm_description   = "SQS queue depth exceeds threshold"
+  comparison_operator = "GreaterThanOrEqualToThreshold"
+  evaluation_periods  = 2
+  threshold           = 100
+  period              = 300
+  statistic           = "Average"
+
+  namespace   = "AWS/SQS"
+  metric_name = "ApproximateNumberOfMessagesVisible"
+
+  # Wiring: module.sqs.queue_name -> dimensions.QueueName
+  dimensions = {
+    QueueName = module.sqs.queue_name
+  }
+
+  # Wiring: module.sns_alerts.topic_arn -> alarm_actions (string -> list wrapping)
+  alarm_actions = [module.sns_alerts.topic_arn]
+  ok_actions    = [module.sns_alerts.topic_arn]
+
+  tags = merge(local.common_tags, {
+    Component = "monitoring"
+  })
+}

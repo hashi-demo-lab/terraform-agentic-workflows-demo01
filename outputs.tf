@@ -1,11 +1,11 @@
 output "alb_arn" {
   description = "ARN of the Application Load Balancer"
-  value       = null # TODO: wire to module.alb.arn in Item D
+  value       = module.alb.arn
 }
 
 output "alb_dns_name" {
   description = "DNS name of the Application Load Balancer (primary application endpoint)"
-  value       = null # TODO: wire to module.alb.dns_name in Item D
+  value       = module.alb.dns_name
 }
 
 output "dynamodb_table_arn" {

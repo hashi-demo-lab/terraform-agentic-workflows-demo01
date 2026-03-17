@@ -6,7 +6,7 @@ locals {
   alb_name            = "${local.name_prefix}-alb"
   ec2_name            = "${local.name_prefix}-web"
   ec2_sg_name         = "${local.name_prefix}-web-sg"
-  log_bucket_name     = "" # TODO: wire to "${local.name_prefix}-alb-logs-${random_id.suffix.hex}" in Item B
+  log_bucket_name     = "${local.name_prefix}-alb-logs-${random_id.suffix.hex}"
   dynamodb_table_name = "${local.name_prefix}-${var.dynamodb_table_name}"
   sqs_queue_name      = "${local.name_prefix}-queue"
   sns_topic_name      = "${local.name_prefix}-alerts"

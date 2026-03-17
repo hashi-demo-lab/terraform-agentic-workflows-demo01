@@ -10,12 +10,12 @@ output "alb_dns_name" {
 
 output "dynamodb_table_arn" {
   description = "ARN of the DynamoDB table"
-  value       = null # TODO: wire to module.dynamodb.dynamodb_table_arn in Item B
+  value       = module.dynamodb.dynamodb_table_arn
 }
 
 output "dynamodb_table_name" {
   description = "Name of the DynamoDB table"
-  value       = null # TODO: wire to module.dynamodb.dynamodb_table_id in Item B
+  value       = module.dynamodb.dynamodb_table_id
 }
 
 output "ec2_instance_id" {
@@ -30,32 +30,32 @@ output "ec2_public_ip" {
 
 output "s3_bucket_arn" {
   description = "ARN of the S3 bucket for ALB access logs"
-  value       = null # TODO: wire to module.s3_alb_logs.s3_bucket_arn in Item B
+  value       = module.s3_alb_logs.s3_bucket_arn
 }
 
 output "s3_bucket_name" {
   description = "Name of the S3 bucket for ALB access logs"
-  value       = null # TODO: wire to module.s3_alb_logs.s3_bucket_name in Item B
+  value       = module.s3_alb_logs.s3_bucket_name
 }
 
 output "sns_topic_arn" {
   description = "ARN of the SNS alerts topic"
-  value       = null # TODO: wire to module.sns_alerts.topic_arn in Item B
+  value       = module.sns_alerts.topic_arn
 }
 
 output "sqs_dlq_url" {
   description = "URL of the SQS dead-letter queue"
-  value       = null # TODO: wire to module.sqs.dead_letter_queue_url in Item B
+  value       = module.sqs.dead_letter_queue_url
 }
 
 output "sqs_queue_arn" {
   description = "ARN of the SQS queue"
-  value       = null # TODO: wire to module.sqs.queue_arn in Item B
+  value       = module.sqs.queue_arn
 }
 
 output "sqs_queue_url" {
   description = "URL of the SQS queue"
-  value       = null # TODO: wire to module.sqs.queue_url in Item B
+  value       = module.sqs.queue_url
 }
 
 output "vpc_id" {

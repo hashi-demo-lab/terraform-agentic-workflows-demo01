@@ -81,9 +81,33 @@ They are tracked but do not block deployment.}}
 | Resources Created | {{N}} |
 | Resources Changed | {{N}} |
 | Resources Destroyed | {{N}} |
-| Cost Estimate | {{MONTHLY_COST or N/A}} |
+| HCP Cost Estimate (native) | {{MONTHLY_COST or N/A}} |
 
 {{If ERRORED, include error summary}}
+
+## Cost Analysis
+
+| Field | Value |
+| ----- | ----- |
+| Run Task | {{TASK_NAME or NONE CONFIGURED}} |
+| Status | {{PASS / FAIL / WARNING / NONE CONFIGURED}} |
+| Enforcement Mode | {{Mandatory / Advisory / N/A}} |
+| Estimated Cost | {{MONTHLY_COST from Run Task or N/A}} |
+| Policy Violations | {{COUNT or 0}} |
+| Details URL | {{RUN_TASK_RESULT_URL or N/A}} |
+
+### Policy Violations
+
+| Policy | Status | Severity | Detail |
+| ------ | ------ | -------- | ------ |
+| {{POLICY_NAME}} | {{PASS/FAIL}} | {{HIGH/MEDIUM}} | {{description}} |
+
+{{If no violations, show "No policy violations detected."}}
+{{If NONE CONFIGURED, show "No Cloudability Run Task attached to workspace. Cost governance skipped — using native HCP cost estimate only."}}
+
+### Optimization Recommendations
+
+{{List recommendations from Run Task results, or "No optimization recommendations provided."}}
 
 ## Sandbox Destroy
 

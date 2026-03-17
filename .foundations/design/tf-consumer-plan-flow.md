@@ -69,33 +69,34 @@ Mapping of the `tf-consumer-plan` orchestrator skill and its interaction with th
 │  │          Verify research files exist at                             │  │
 │  │          specs/{FEATURE}/research-*.md via Glob.                    │  │
 │  │                                                                    │  │
-│  │  ┌──────────────┐ ┌──────────────┐ ┌──────────────┐ ┌──────────┐ │  │
-│  │  │tf-consumer-  │ │tf-consumer-  │ │tf-consumer-  │ │tf-consmr-│ │  │
-│  │  │research      │ │research      │ │research      │ │research  │ │  │
-│  │  │ (Agent 1)    │ │ (Agent 2)    │ │ (Agent 3)    │ │(Agent 4) │ │  │
-│  │  │              │ │              │ │              │ │ optional  │ │  │
-│  │  │ Private      │ │ AWS          │ │ Module       │ │Workspace │ │  │
-│  │  │ registry     │ │ architecture │ │ wiring       │ │& deploy  │ │  │
-│  │  │ modules      │ │              │ │              │ │          │ │  │
-│  │  │              │ │              │ │              │ │          │ │  │
-│  │  │ INPUT:       │ │ INPUT:       │ │ INPUT:       │ │ INPUT:   │ │  │
-│  │  │ 1 question   │ │ 1 question   │ │ 1 question   │ │1 question│ │  │
-│  │  │              │ │              │ │              │ │          │ │  │
-│  │  │ MCP calls:   │ │ MCP calls:   │ │ MCP calls:   │ │MCP calls:│ │  │
-│  │  │ -search_     │ │ -aws_search  │ │ -get_private │ │-list_    │ │  │
-│  │  │  private_    │ │ -aws_read    │ │  _module_    │ │ variable │ │  │
-│  │  │  modules     │ │              │ │  details     │ │ _sets    │ │  │
-│  │  │ -get_private │ │              │ │ -search_     │ │-get_     │ │  │
-│  │  │  _module_    │ │              │ │  private_    │ │ workspace│ │  │
-│  │  │  details     │ │              │ │  modules     │ │ _details │ │  │
-│  │  │              │ │              │ │              │ │          │ │  │
-│  │  │ OUTPUT:      │ │ OUTPUT:      │ │ OUTPUT:      │ │ OUTPUT:  │ │  │
-│  │  │ research-    │ │ research-    │ │ research-    │ │research- │ │  │
-│  │  │ {slug}.md    │ │ {slug}.md    │ │ {slug}.md    │ │{slug}.md │ │  │
-│  │  │ TO DISK      │ │ TO DISK      │ │ TO DISK      │ │TO DISK   │ │  │
-│  │  └──────┬───────┘ └──────┬───────┘ └──────┬───────┘ └────┬─────┘ │  │
-│  │         │                │                │              │        │  │
-│  │         └────────────────┴────────┬───────┴──────────────┘        │  │
+│  │  ┌──────────────┐ ┌──────────────┐ ┌──────────────┐ ┌──────────┐ ┌──────────┐ │  │
+│  │  │tf-consumer-  │ │tf-consumer-  │ │tf-consumer-  │ │tf-consmr-│ │tf-consmr-│ │  │
+│  │  │research      │ │research      │ │research      │ │research  │ │research  │ │  │
+│  │  │ (Agent 1)    │ │ (Agent 2)    │ │ (Agent 3)    │ │(Agent 4) │ │(Agent 5) │ │  │
+│  │  │              │ │              │ │              │ │          │ │          │ │  │
+│  │  │ Private      │ │ AWS          │ │ Module       │ │Workspace │ │Cost      │ │  │
+│  │  │ registry     │ │ architecture │ │ wiring       │ │& deploy  │ │governance│ │  │
+│  │  │ modules      │ │              │ │              │ │          │ │          │ │  │
+│  │  │              │ │              │ │              │ │          │ │          │ │  │
+│  │  │ INPUT:       │ │ INPUT:       │ │ INPUT:       │ │ INPUT:   │ │ INPUT:   │ │  │
+│  │  │ 1 question   │ │ 1 question   │ │ 1 question   │ │1 question│ │1 question│ │  │
+│  │  │              │ │              │ │              │ │          │ │          │ │  │
+│  │  │ MCP calls:   │ │ MCP calls:   │ │ MCP calls:   │ │MCP calls:│ │Reads:    │ │  │
+│  │  │ -search_     │ │ -aws_search  │ │ -get_private │ │-list_    │ │-docs/    │ │  │
+│  │  │  private_    │ │ -aws_read    │ │  _module_    │ │ variable │ │cloudabil-│ │  │
+│  │  │  modules     │ │              │ │  details     │ │ _sets    │ │ity-run-  │ │  │
+│  │  │ -get_private │ │              │ │ -search_     │ │-get_     │ │task-     │ │  │
+│  │  │  _module_    │ │              │ │  private_    │ │ workspace│ │setup.md  │ │  │
+│  │  │  details     │ │              │ │  modules     │ │ _details │ │          │ │  │
+│  │  │              │ │              │ │              │ │          │ │          │ │  │
+│  │  │ OUTPUT:      │ │ OUTPUT:      │ │ OUTPUT:      │ │ OUTPUT:  │ │ OUTPUT:  │ │  │
+│  │  │ research-    │ │ research-    │ │ research-    │ │research- │ │research- │ │  │
+│  │  │ {slug}.md    │ │ {slug}.md    │ │ {slug}.md    │ │{slug}.md │ │cost-     │ │  │
+│  │  │ TO DISK      │ │ TO DISK      │ │ TO DISK      │ │TO DISK   │ │govern-   │ │  │
+│  │  │              │ │              │ │              │ │          │ │ance.md   │ │  │
+│  │  └──────┬───────┘ └──────┬───────┘ └──────┬───────┘ └────┬─────┘ └────┬─────┘ │  │
+│  │         │                │                │              │            │        │  │
+│  │         └────────────────┴────────┬───────┴──────────────┴────────────┘        │  │
 │  │                                   │                               │  │
 │  │                    All findings written to disk as                 │  │
 │  │                    specs/{FEATURE}/research-{slug}.md              │  │
@@ -197,13 +198,13 @@ tf-consumer-plan orchestrator
     │    Clarified requirements ─────────────────────────────────┐
     │    (module selection, workspace, security, scope)           │
     │                                                            │
-    ├──▶ 3-4x tf-consumer-research agents (concurrent, write to disk)
-    │    ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐   │
-    │    │ Private  │ │ AWS      │ │ Module   │ │Workspace │   │
-    │    │ registry │ │ architec │ │ wiring   │ │& deploy  │   │
-    │    │ modules  │ │ ture     │ │ patterns │ │          │   │
-    │    └─────┬────┘ └────┬─────┘ └────┬─────┘ └────┬─────┘   │
-    │          └───────────┴────────────┴─────────────┘         │
+    ├──▶ 4-5x tf-consumer-research agents (concurrent, write to disk)
+    │    ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐
+    │    │ Private  │ │ AWS      │ │ Module   │ │Workspace │ │Cost      │
+    │    │ registry │ │ architec │ │ wiring   │ │& deploy  │ │governance│
+    │    │ modules  │ │ ture     │ │ patterns │ │          │ │          │
+    │    └─────┬────┘ └────┬─────┘ └────┬─────┘ └────┬─────┘ └────┬─────┘
+    │          └───────────┴────────────┴─────────────┴────────────┘
     │                      │                                     │
     │              Research files: specs/{FEATURE}/research-*.md │
     │                                                            │

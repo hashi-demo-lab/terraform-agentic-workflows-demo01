@@ -215,6 +215,7 @@ Consumer code does NOT use `.tftest.hcl` files. Validation is via tooling and sa
 | Syntax | `terraform validate` | Yes |
 | Linting | `tflint` | Yes |
 | Security scan | `trivy config .` — no Critical or High | Yes |
+| Cost governance | Cloudability Run Task (post-plan) | Configurable |
 | Sandbox deploy | HCP Terraform plan + apply in sandbox workspace | Yes |
 | Destroy clean | Sandbox workspace destroy succeeds | Yes |
 
@@ -272,6 +273,9 @@ All four workflow phases are mandatory and sequential. Between phases:
 - Cost-impacting configuration choices MUST be documented in the design
 - Sandbox deployments SHOULD use minimal resource sizes
 - HCP Terraform cost estimation SHOULD be reviewed during sandbox plan
+- Cloudability Run Task results MUST be parsed post-plan when attached to workspace
+- If enforcement mode is Mandatory, cost policy violations MUST block apply
+- `aws_caller_identity` data source SHOULD be included for org-specific pricing
 
 ### 7.2 Observability
 
@@ -286,6 +290,7 @@ All four workflow phases are mandatory and sequential. Between phases:
 - Variable sets MUST be used for shared configuration (provider credentials, common tags)
 - Run triggers MAY be used for cross-workspace dependencies
 - Sentinel policies MAY enforce organizational compliance at the workspace level
+- Cloudability Run Tasks MAY provide cost governance at the workspace level
 
 ---
 

@@ -42,6 +42,8 @@ Produce a single `specs/{FEATURE}/consumer-design.md` from clarified requirement
    - **Functional requirements** — what the deployment must provision, derived from Phase 1 clarification
    - **Non-functional requirements** — constraints like compliance, performance, availability, cost
 
+   Populate the **Cost Constraints** subsection from Phase 1 clarification answers and `research-cost-governance.md` findings (if present). Set enforcement mode to Advisory, Mandatory, or N/A. If no cost governance was discussed during clarification, default all values to N/A.
+
    ### Section 2 — Module Selection & Architecture
 
    Define the architectural decisions, module inventory, glue resources, and workspace configuration.
@@ -96,6 +98,10 @@ Produce a single `specs/{FEATURE}/consumer-design.md` from clarified requirement
    - Every functional requirement in §1 maps to at least one module in §2
    - No requirement is ambiguous or untestable
    - Scope boundary is clearly defined
+
+   #### Cost Constraints Validation
+   - Enforcement mode is one of: Advisory, Mandatory, or N/A
+   - If `research-cost-governance.md` exists, its findings are reflected in the Cost Constraints table
 
    #### Specification Consistency
    - Table of Contents links to all 6 sections
@@ -166,6 +172,7 @@ Produce a single `specs/{FEATURE}/consumer-design.md` from clarified requirement
 - If research findings contradict a specific constitution rule, add a `[CONSTITUTION DEVIATION]` entry in §6 with: the rule number, what the research found, and why the deviation is justified
 - Maximum 3 `[NEEDS CLARIFICATION]` markers total — prefer informed assumptions with documented rationale
 - Naming consistency: module and variable names must be canonical throughout the document
+- `research-cost-governance.md` findings (if present) MUST inform Cost Constraints in Section 1 and Run Tasks setting in Section 2 Workspace Configuration
 
 ## Risk Rating Quick Reference
 

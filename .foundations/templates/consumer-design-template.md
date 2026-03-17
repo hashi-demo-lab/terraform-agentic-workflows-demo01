@@ -42,6 +42,17 @@ what application or service it supports. No implementation details.}
 {Requirements bridge Purpose and Architecture. They are testable and unambiguous.
 Frame capabilities in terms of outcomes, not modules.}
 
+### Cost Constraints
+
+| Constraint | Value |
+|------------|-------|
+| Monthly budget target | {$ amount or N/A} |
+| Enforcement mode | {Advisory / Mandatory / N/A} |
+| Cost allocation tags | {required tag keys or N/A} |
+| Provider account mapping | {aws_caller_identity for org-specific pricing or N/A} |
+
+{If no cost constraints apply, set all values to N/A and note "No cost governance configured."}
+
 ---
 
 ## 2. Module Selection & Architecture
@@ -68,6 +79,8 @@ Frame capabilities in terms of outcomes, not modules.}
 
 {Use `--` if no glue resources are needed.}
 
+{If Cloudability Run Task is configured and org-specific pricing is desired, include `aws_caller_identity` data source for provider account mapping.}
+
 ### Workspace Configuration
 
 | Setting | Value | Notes |
@@ -78,6 +91,7 @@ Frame capabilities in terms of outcomes, not modules.}
 | Terraform Version | >= {version} | Pinned in workspace |
 | Variable Sets | {names} | Shared credentials, tags |
 | VCS Connection | {repo/branch} | Optional — manual trigger if not set |
+| Run Tasks | {cloudability-governance / none} | Cost governance via Cloudability Run Task |
 
 ---
 

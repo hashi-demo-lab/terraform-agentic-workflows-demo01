@@ -76,9 +76,16 @@ If `$ARGUMENTS` includes sandbox deployment instructions:
 1. Identify or create sandbox workspace: `sandbox-{project}-{feature}`
 2. Trigger a plan run via HCP Terraform
 3. If plan succeeds, trigger apply (if approved in `$ARGUMENTS`)
-4. Capture: run URL, plan/apply status, resource counts, cost estimate
-5. Report deployment results
-6. Do NOT destroy sandbox resources — the orchestrator handles destroy prompting
+4. Capture: run URL, plan/apply status, resource counts, HCP cost estimate (native)
+5. **Parse Run Task results**: Call `get_run_details` for the completed run, extract `task-stages`, find the `post_plan` stage, and extract each task's name, status, message, and URL. If no task stages exist, record "NONE CONFIGURED".
+6. **Evaluate cost compliance**: Read the design document's Cost Constraints section (§1). Apply gating logic:
+   - **Mandatory + failed** → FAIL — block apply, report as HIGH severity issue
+   - **Advisory + failed** → WARNING — proceed, report as MEDIUM severity issue
+   - **All passed** → PASS
+   - **No Run Tasks configured** → skip cost evaluation, fall back to native HCP cost estimate
+   - **Enforcement mode N/A** → skip cost evaluation entirely
+7. Report deployment results
+8. Do NOT destroy sandbox resources — the orchestrator handles destroy prompting
 
 If sandbox deployment is not requested, skip this step and note "Sandbox deploy: SKIPPED" in the report.
 
@@ -121,7 +128,22 @@ Production Readiness: {Ready / Not Ready}
 - Plan: PASS/FAIL/SKIPPED
 - Apply: PASS/FAIL/SKIPPED
 - Resources: {created}/{changed}/{destroyed}
-- Cost Estimate: {monthly or N/A}
+- HCP Cost Estimate (native): {monthly or N/A}
+
+### Cost Analysis (Run Tasks)
+- Run Task: {task name or NONE CONFIGURED}
+- Status: {PASS / FAIL / WARNING / NONE CONFIGURED}
+- Enforcement Mode: {Mandatory / Advisory / N/A}
+- Estimated Cost: {monthly from Run Task or N/A}
+- Policy Violations: {count or 0}
+- Details URL: {Run Task result URL or N/A}
+
+| Policy | Status | Severity | Detail |
+|--------|--------|----------|--------|
+| {policy name} | {PASS/FAIL} | {HIGH/MEDIUM} | {description} |
+
+Optimization Recommendations:
+- {recommendation from Run Task or "None provided"}
 
 ### Issues Requiring Manual Fix
 - [list of issues with file:line references]

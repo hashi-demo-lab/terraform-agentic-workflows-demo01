@@ -44,7 +44,7 @@ description: Scoring rubrics, severity classification, evaluation methodology, a
 | #   | Dimension              | Weight | Key Criteria                                                                                               |
 | --- | ---------------------- | ------ | ---------------------------------------------------------------------------------------------------------- |
 | 1   | Module Usage           | 25%    | Private registry modules, semantic versioning, minimal raw resources (glue only)                           |
-| 2   | Security & Compliance  | 30%    | Module secure defaults honoured, no credentials, dynamic auth, audit logs. **<5.0 = Not Production Ready** |
+| 2   | Security & Compliance  | 30%    | Module secure defaults honoured, no credentials, dynamic auth, audit logs, cost policy compliance (if Run Tasks configured). **<5.0 = Not Production Ready** |
 | 3   | Code Quality           | 15%    | `terraform fmt`, naming, wiring clarity, file organization                                                 |
 | 4   | Variables & Outputs    | 10%    | Type constraints, validation rules, defaults, descriptions                                                 |
 | 5   | Wiring & Integration   | 10%    | Module output-to-input connections, type compatibility, no circular deps                                   |
@@ -81,7 +81,7 @@ description: Scoring rubrics, severity classification, evaluation methodology, a
 ### Module/Consumer Workflows
 
 - D1: Quote module sources or resource blocks, identify raw resources (consumer: flag non-glue raw resources), suggest registry alternatives
-- D2: File:line + CVE/CWE reference (if applicable) + severity + code fix
+- D2: File:line + CVE/CWE reference (if applicable) + severity + code fix. Cost policy violations from Cloudability Run Task: mandatory-mode failure = HIGH, advisory-mode failure = MEDIUM
 - D3: Format violations, missing docs, duplication with suggested refactoring
 - D4: Hardcoded values, missing validation, missing outputs, missing descriptions
 - D5: Module — missing test files, assertion gaps, mock provider issues; Consumer — wiring validation gaps, `terraform validate` issues

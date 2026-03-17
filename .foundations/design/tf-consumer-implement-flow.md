@@ -95,6 +95,13 @@ Mapping of the `tf-consumer-implement` orchestrator skill and its interaction wi
 │  │           workspace. Capture run URL + deploy status.        │   │
 │  │                         │                                    │   │
 │  │                         ▼                                    │   │
+│  │  Step 11b: Parse Run Task results (post-plan)                │   │
+│  │            Call get_run_details → extract task-stages         │   │
+│  │            Evaluate cost compliance against design's          │   │
+│  │            Cost Constraints (Mandatory/Advisory/N/A)          │   │
+│  │            If no Run Tasks → "NONE CONFIGURED", continue     │   │
+│  │                         │                                    │   │
+│  │                         ▼                                    │   │
 │  │  Step 12: Orchestrator writes deployment report directly     │   │
 │  │           (reads tf-report-template, applies consumer        │   │
 │  │            format — NOT a subagent dispatch)                  │   │

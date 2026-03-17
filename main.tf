@@ -7,6 +7,7 @@ module "demo_bucket" {
   version = "6.0.0"
 
   bucket_prefix = "${var.bucket_prefix}-${var.environment}"
+  environment   = var.environment
   force_destroy = var.force_destroy
 
   versioning = {

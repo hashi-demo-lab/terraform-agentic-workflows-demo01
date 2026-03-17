@@ -20,12 +20,12 @@ output "dynamodb_table_name" {
 
 output "ec2_instance_id" {
   description = "Instance ID of the web server"
-  value       = null # TODO: wire to module.ec2_web.id in Item C
+  value       = module.ec2_web.id
 }
 
 output "ec2_public_ip" {
   description = "Public IP address of the web server"
-  value       = null # TODO: wire to module.ec2_web.public_ip in Item C
+  value       = module.ec2_web.public_ip
 }
 
 output "s3_bucket_arn" {

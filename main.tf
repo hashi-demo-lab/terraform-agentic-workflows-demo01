@@ -118,3 +118,62 @@ module "sns_alerts" {
     Component = "monitoring"
   })
 }
+
+# --------------------------------------------------------------------------
+# Networking and Compute (Item C) -- VPC data source wired
+# --------------------------------------------------------------------------
+
+# Security group for EC2: HTTP ingress from VPC CIDR, all egress per FR-4
+module "ec2_sg" {
+  source  = "app.terraform.io/hashi-demos-apj/security-group/aws"
+  version = "~> 5.3"
+
+  name        = local.ec2_sg_name
+  description = "Security group for web server EC2 instance"
+  vpc_id      = data.aws_vpc.selected.id
+
+  # HTTP (port 80) ingress from VPC CIDR block per FR-4 and SEC05-BP02
+  ingress_rules       = ["http-80-tcp"]
+  ingress_cidr_blocks = [data.aws_vpc.selected.cidr_block]
+
+  # All egress allowed
+  egress_rules = ["all-all"]
+
+  tags = merge(local.common_tags, {
+    Component = "networking"
+  })
+}
+
+# Single EC2 instance running HTTP application per FR-3
+module "ec2_web" {
+  source  = "app.terraform.io/hashi-demos-apj/ec2-instance/aws"
+  version = "~> 6.1"
+
+  name          = local.ec2_name
+  instance_type = var.instance_type
+
+  # Place in first public subnet per FR-3
+  subnet_id = data.aws_subnets.public.ids[0]
+
+  # Wire security group from ec2_sg module output -> list(string) wrapping
+  vpc_security_group_ids = [module.ec2_sg.security_group_id]
+
+  # Disable module-created SG since we use the standalone ec2_sg module
+  create_security_group = false
+
+  # Public IP for dev access per SEC05-BP02
+  associate_public_ip_address = true
+
+  # User data script for HTTP server bootstrap per FR-3
+  user_data = var.user_data
+
+  # Module secure defaults honoured -- DO NOT override:
+  # metadata_options.http_tokens = "required" (IMDSv2 enforced per CIS AWS 5.6)
+
+  # No IAM instance profile -- application does not require AWS API access in dev (CIS AWS 1.16)
+  create_iam_instance_profile = false
+
+  tags = merge(local.common_tags, {
+    Component = "compute"
+  })
+}

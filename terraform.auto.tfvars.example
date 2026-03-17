@@ -1,0 +1,18 @@
+# Required variables
+project_name = "my-web-stack"
+owner        = "platform-team"
+
+# Optional overrides (defaults shown)
+# aws_region                     = "ap-southeast-2"
+# environment                    = "dev"
+# application_name               = "web-stack"
+# name_prefix                    = "my-prefix"
+# vpc_name                       = ""
+# subnet_tier_tag                = "Public"
+# instance_type                  = "t3.small"
+# dynamodb_table_name            = "app-data"
+# dynamodb_hash_key              = "id"
+# sqs_message_retention_seconds  = 345600
+# sqs_visibility_timeout_seconds = 30
+# sqs_max_receive_count          = 5
+# alarm_sns_email                = ""

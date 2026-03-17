@@ -184,7 +184,8 @@ module "demo_bucket" {
   bucket_prefix = "${var.name_prefix}-${var.environment}"
   force_destroy = true
 
-  attach_lb_log_delivery_policy = true
+  attach_elb_log_delivery_policy = true
+  attach_lb_log_delivery_policy  = true
 
   versioning = {
     enabled = true

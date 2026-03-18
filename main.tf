@@ -106,14 +106,15 @@ module "alb" {
   }
 
   # Target group for EC2 instances on port 80
-  # target_id will be wired to module.ec2_instance.id in Item C
+  # Wiring: module.ec2_instance.id -> target_groups.web.target_id
   target_groups = {
     web = {
       name_prefix       = "web-"
       protocol          = "HTTP"
       port              = 80
       target_type       = "instance"
-      create_attachment = false # EC2 instance attachment wired in Item C
+      target_id         = module.ec2_instance.id
+      create_attachment = true
 
       health_check = {
         enabled             = true
@@ -137,7 +138,37 @@ module "alb" {
 # Compute — EC2 Instance
 #--------------------------------------------------------------
 
-# TODO: module.ec2_instance added in Item C
+# EC2 web server instance: Amazon Linux 2023, first public subnet, HTTP via security group
+# AMI lookup via module default SSM parameter: /aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64
+module "ec2_instance" {
+  source  = "app.terraform.io/hashi-demos-apj/ec2-instance/aws"
+  version = "~> 6.1"
+
+  name          = "${local.name_prefix}-web"
+  instance_type = var.instance_type
+
+  # Networking: first public subnet, security group from ec2_sg module
+  # Wiring: data.aws_subnets.public.ids[0] -> subnet_id
+  # Wiring: module.ec2_sg.security_group_id -> vpc_security_group_ids (wrapped in list)
+  subnet_id              = local.public_subnets[0]
+  vpc_security_group_ids = [module.ec2_sg.security_group_id]
+
+  # [SECURITY OVERRIDE] Public IP enabled -- dev environment requires direct HTTP access;
+  # ALB in public subnets requires reachable targets. SG limits ingress to VPC CIDR on port 80.
+  associate_public_ip_address = true
+
+  # User data: httpd install script (resolved via locals)
+  user_data = local.user_data
+
+  # Disable module-created security group; using standalone ec2_sg module instead
+  create_security_group = false
+
+  # IMDSv2 enforcement: module defaults http_tokens = "required", hop_limit = 1 (honoured)
+
+  tags = {
+    Component = "compute"
+  }
+}
 
 #--------------------------------------------------------------
 # Storage — S3 Bucket
@@ -182,13 +213,55 @@ module "s3_bucket" {
 # Data — DynamoDB Table
 #--------------------------------------------------------------
 
-# TODO: module.dynamodb_table added in Item C
+# DynamoDB table for application state: on-demand billing, PITR, SSE enabled
+module "dynamodb_table" {
+  source  = "app.terraform.io/hashi-demos-apj/dynamodb-table/aws"
+  version = "~> 5.2"
+
+  name     = "${local.name_prefix}-data"
+  hash_key = "id"
+
+  attributes = [
+    {
+      name = "id"
+      type = "S"
+    }
+  ]
+
+  billing_mode                   = "PAY_PER_REQUEST"
+  point_in_time_recovery_enabled = true
+  server_side_encryption_enabled = true
+
+  # [SECURITY OVERRIDE] Deletion protection disabled -- dev/sandbox environment
+  # must be fully destroyable without manual intervention (NFR-7)
+  deletion_protection_enabled = false
+
+  tags = {
+    Component = "data"
+  }
+}
 
 #--------------------------------------------------------------
 # Messaging — SQS Queue
 #--------------------------------------------------------------
 
-# TODO: module.sqs added in Item C
+# SQS queue with DLQ for background message processing
+module "sqs" {
+  source  = "app.terraform.io/hashi-demos-apj/sqs/aws"
+  version = "~> 5.1"
+
+  name                       = "${local.name_prefix}-queue"
+  message_retention_seconds  = 345600 # 4 days
+  visibility_timeout_seconds = 30
+  sqs_managed_sse_enabled    = true
+
+  # Dead-letter queue: module auto-wires redrive policy with maxReceiveCount = 5
+  create_dlq = true
+
+  tags = {
+    Component = "messaging"
+  }
+}
 
 #--------------------------------------------------------------
 # Monitoring — SNS Topic, CloudWatch Alarms

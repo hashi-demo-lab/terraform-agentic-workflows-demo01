@@ -10,12 +10,12 @@ output "alb_arn" {
 
 output "ec2_instance_id" {
   description = "EC2 instance ID"
-  value       = "" # TODO: wire to module.ec2_instance.id in Item C
+  value       = module.ec2_instance.id
 }
 
 output "ec2_public_ip" {
   description = "EC2 instance public IP address"
-  value       = "" # TODO: wire to module.ec2_instance.public_ip in Item C
+  value       = module.ec2_instance.public_ip
 }
 
 output "s3_bucket_name" {
@@ -30,27 +30,27 @@ output "s3_bucket_arn" {
 
 output "dynamodb_table_name" {
   description = "DynamoDB table name"
-  value       = "" # TODO: wire to module.dynamodb_table.dynamodb_table_id in Item C
+  value       = module.dynamodb_table.dynamodb_table_id
 }
 
 output "dynamodb_table_arn" {
   description = "DynamoDB table ARN"
-  value       = "" # TODO: wire to module.dynamodb_table.dynamodb_table_arn in Item C
+  value       = module.dynamodb_table.dynamodb_table_arn
 }
 
 output "sqs_queue_url" {
   description = "SQS queue URL"
-  value       = "" # TODO: wire to module.sqs.queue_url in Item C
+  value       = module.sqs.queue_url
 }
 
 output "sqs_queue_arn" {
   description = "SQS queue ARN"
-  value       = "" # TODO: wire to module.sqs.queue_arn in Item C
+  value       = module.sqs.queue_arn
 }
 
 output "sqs_dlq_url" {
   description = "SQS dead-letter queue URL"
-  value       = "" # TODO: wire to module.sqs.dead_letter_queue_url in Item C
+  value       = module.sqs.dead_letter_queue_url
 }
 
 output "sns_topic_arn" {

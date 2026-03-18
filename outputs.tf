@@ -1,11 +1,11 @@
 output "alb_dns_name" {
   description = "DNS name of the application load balancer"
-  value       = "" # TODO: wire to module.alb.dns_name in Item B
+  value       = module.alb.dns_name
 }
 
 output "alb_arn" {
   description = "ARN of the application load balancer"
-  value       = "" # TODO: wire to module.alb.arn in Item B
+  value       = module.alb.arn
 }
 
 output "ec2_instance_id" {
@@ -20,12 +20,12 @@ output "ec2_public_ip" {
 
 output "s3_bucket_name" {
   description = "S3 bucket name for ALB access logs"
-  value       = "" # TODO: wire to module.s3_bucket.s3_bucket_id in Item B
+  value       = module.s3_bucket.s3_bucket_name
 }
 
 output "s3_bucket_arn" {
   description = "S3 bucket ARN"
-  value       = "" # TODO: wire to module.s3_bucket.s3_bucket_arn in Item B
+  value       = module.s3_bucket.s3_bucket_arn
 }
 
 output "dynamodb_table_name" {

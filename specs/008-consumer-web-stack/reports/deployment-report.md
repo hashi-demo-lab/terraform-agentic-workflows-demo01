@@ -110,8 +110,8 @@ No optimization recommendations provided.
 
 | Field | Value |
 | ----- | ----- |
-| Destroy Status | PENDING |
-| Destroy Run URL | N/A |
+| Destroy Status | DESTROYED |
+| Destroy Run URL | https://app.terraform.io/app/hashi-demos-apj/sandbox_consumer_web_stack |
 
 ## Overall Status
 

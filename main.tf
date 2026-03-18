@@ -165,6 +165,13 @@ module "ec2_instance" {
 
   # IMDSv2 enforcement: module defaults http_tokens = "required", hop_limit = 1 (honoured)
 
+  # Root EBS volume encryption
+  root_block_device = {
+    encrypted = true
+    type      = "gp3"
+    size      = 20
+  }
+
   tags = {
     Component = "compute"
   }

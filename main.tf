@@ -267,4 +267,74 @@ module "sqs" {
 # Monitoring — SNS Topic, CloudWatch Alarms
 #--------------------------------------------------------------
 
-# TODO: module.sns, module.alb_5xx_alarm, module.sqs_depth_alarm added in Item D
+# SNS topic for operational alert routing
+module "sns" {
+  source  = "app.terraform.io/hashi-demos-apj/sns/aws"
+  version = "~> 7.0"
+
+  name = "${local.name_prefix}-alerts"
+
+  tags = {
+    Component = "monitoring"
+  }
+}
+
+# CloudWatch alarm: ALB 5xx error rate exceeds threshold
+# Wiring: module.alb.arn_suffix -> dimensions.LoadBalancer
+# Wiring: module.sns.topic_arn -> alarm_actions, ok_actions (wrapped in list)
+module "alb_5xx_alarm" {
+  source  = "app.terraform.io/hashi-demos-apj/cloudwatch/aws//modules/metric-alarm"
+  version = "~> 5.7"
+
+  alarm_name          = "${local.name_prefix}-alb-5xx"
+  alarm_description   = "ALB 5xx error rate exceeds threshold"
+  namespace           = "AWS/ApplicationELB"
+  metric_name         = "HTTPCode_ELB_5XX_Count"
+  statistic           = "Sum"
+  comparison_operator = "GreaterThanOrEqualToThreshold"
+  threshold           = 10
+  period              = 300
+  evaluation_periods  = 2
+  treat_missing_data  = "notBreaching"
+
+  dimensions = {
+    LoadBalancer = module.alb.arn_suffix
+  }
+
+  alarm_actions = [module.sns.topic_arn]
+  ok_actions    = [module.sns.topic_arn]
+
+  tags = {
+    Component = "monitoring"
+  }
+}
+
+# CloudWatch alarm: SQS queue depth exceeds threshold
+# Wiring: module.sqs.queue_name -> dimensions.QueueName
+# Wiring: module.sns.topic_arn -> alarm_actions, ok_actions (wrapped in list)
+module "sqs_depth_alarm" {
+  source  = "app.terraform.io/hashi-demos-apj/cloudwatch/aws//modules/metric-alarm"
+  version = "~> 5.7"
+
+  alarm_name          = "${local.name_prefix}-sqs-depth"
+  alarm_description   = "SQS queue depth exceeds threshold"
+  namespace           = "AWS/SQS"
+  metric_name         = "ApproximateNumberOfMessagesVisible"
+  statistic           = "Average"
+  comparison_operator = "GreaterThanOrEqualToThreshold"
+  threshold           = 100
+  period              = 300
+  evaluation_periods  = 2
+  treat_missing_data  = "notBreaching"
+
+  dimensions = {
+    QueueName = module.sqs.queue_name
+  }
+
+  alarm_actions = [module.sns.topic_arn]
+  ok_actions    = [module.sns.topic_arn]
+
+  tags = {
+    Component = "monitoring"
+  }
+}

@@ -55,7 +55,7 @@ output "sqs_dlq_url" {
 
 output "sns_topic_arn" {
   description = "SNS topic ARN for operational alerts"
-  value       = "" # TODO: wire to module.sns.topic_arn in Item D
+  value       = module.sns.topic_arn
 }
 
 output "vpc_id" {

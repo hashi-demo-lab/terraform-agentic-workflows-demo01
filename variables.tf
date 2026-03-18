@@ -34,6 +34,7 @@ variable "environment" {
 variable "owner" {
   description = "Resource owner for tagging and accountability"
   type        = string
+  default     = "platform-team"
 
   validation {
     condition     = length(var.owner) >= 1

@@ -12,14 +12,17 @@ data "aws_vpc" "selected" {
 }
 
 # Look up public subnets in the selected VPC (at least 2 AZs required for ALB)
+# Uses map-public-ip-on-launch filter to reliably identify public subnets
+# regardless of tagging conventions
 data "aws_subnets" "public" {
   filter {
     name   = "vpc-id"
     values = [data.aws_vpc.selected.id]
   }
 
-  tags = {
-    Tier = "public"
+  filter {
+    name   = "map-public-ip-on-launch"
+    values = ["true"]
   }
 }
 
